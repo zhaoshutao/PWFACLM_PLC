@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <POU Name="SLOWTASK" Id="{c6f4b232-a213-44a3-bb69-9a37166cc52c}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM SLOWTASK
+VAR
+	(* !!! TO DO: REPLACE WITH YOUR PLC VARIABLES/FB INSTANCES !!! regular PLC variables/FB instances ... *)
+	iCounter			: UDINT;					(* non persistent counter *)
+	fbMachineSlow		: FB_Dummy;					(* demo fb instance *)
+END_VAR
+VAR PERSISTENT
+	(* !!! TO DO: REPLACE WITH YOUR PERSISTENT PLC VARIABLES !!! persistent variables ... *)
+	iCounter_P				: UDINT;			(* persistent counter *)
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* evaluate UPS State *)
+IF eGlobalSUpsState > eSUPS_PowerFailure THEN
+	(* next cycles of powerfailure *)
+
+	(* skip regular code execution for the remaining cycles of the powerfailure/writing of persistent data/quick shutdown  ... *)
+	RETURN;
+END_IF
+
+
+(* !!! TO DO: REPLACE WITH YOUR PLC CODE !!! regular code execution *)
+iCounter := iCounter + 1;
+iCounter_P := iCounter_P + 1;
+fbMachineSlow();]]></ST>
+    </Implementation>
+    <LineIds Name="SLOWTASK">
+      <LineId Id="10" Count="12" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

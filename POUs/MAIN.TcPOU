@@ -1,0 +1,509 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <POU Name="MAIN" Id="{ea8307cc-ac85-49ab-b5fb-1ec00128eeda}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+    (* Axis FB array — loop over cActiveAxes *)
+    fbAxes: ARRAY[1..GVL.cMaxAxes] OF FB_AxisControl;
+
+    (* ============================================================
+       Init
+       ============================================================ *)
+    init_State: INT;
+    SetPosition_delay: TON;
+    init_delay: TON;
+    mcSetPos: ARRAY[1..GVL.cMaxAxes] OF MC_SetPosition;
+
+    (* ============================================================
+       All-axis broadcast
+       ============================================================ *)
+    m_State_AxisAll: INT;
+    m_delay: TON;
+
+    (* ============================================================
+       Simulation
+       ============================================================ *)
+    simulation_EStop: BOOL;
+
+    (* ============================================================
+       Restart
+       ============================================================ *)
+    RestartTC: TC_Restart;
+
+    (* ============================================================
+       Recipe management
+       ============================================================ *)
+    RecipeINT: INT;
+    RecipeBOOL: BOOL;
+    RecipeManCommands: RecipeManCommands;
+    SaveParameter: BOOL;
+    LoadParameter: BOOL;
+    Save_R_TRIG: R_TRIG;
+    Read_R_TRIG: R_TRIG;
+    loadparameterStatus: INT;
+    RecipeBOOL2: BOOL;
+    ReturnDwordLoad: DWORD;
+    InsertionDeviceName: STRING;
+    state_loadParameters: INT;
+    LoadRecipeParameters: BOOL;
+    loadParametersDone: BOOL;
+    CollimatorName: STRING;
+    RecipeSavedDate: STRING;
+    RecipeDescription: STRING;
+
+    (* ============================================================
+       Loop helpers
+       ============================================================ *)
+    _i: UINT;
+    _allDone: BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* ============================================================
+   MAIN — Storage Ring Collimator (HEPS)
+   Multi-axis control with Modbus TCP ↔ EPICS
+   ============================================================ *)
+
+(* Copy hardware IO into axis IO structs *)
+A_MapHWIO();
+
+(* Initialization — position recovery from persistent memory *)
+A_init();
+
+(* Simulation mode — must run BEFORE FB so limit switches are TRUE when MC_Power is called *)
+simu();
+
+(* Run all active axis FBs *)
+IF GVL.initStatus THEN
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        fbAxes[_i](
+            Axis := GVL.axisRefs[_i],
+            IO := GVL.axesIO[_i],
+            Cfg := GVL.axesCfg[_i]
+        );
+    END_FOR
+    AxisAll_Motion();
+END_IF
+
+(* UPS persistent data *)
+UPSPersitent();
+
+
+
+(* Modbus data exchange *)
+modbus();
+
+(* Restart TC *)
+A_RestartTC();
+
+(* Recipe parameters *)
+A_InitRecipeParameters();
+IF NOT loadParametersDone THEN
+    RETURN;
+END_IF]]></ST>
+    </Implementation>
+    <Action Name="A_init" Id="{f2000002-0000-0000-0000-000000000002}">
+      <Implementation>
+        <ST><![CDATA[(* ============================================================
+   Initialization — delay, then restore positions after restart
+   axesCfg is VAR_GLOBAL PERSISTENT, so all values survive restart automatically
+   ============================================================ *)
+
+(* 3-second startup delay *)
+init_delay.PT := T#3S;
+init_delay();
+init_delay.IN := TRUE;
+IF NOT init_delay.Q THEN
+    RETURN;
+END_IF
+
+(* Call all MC_SetPosition FBs every cycle *)
+FOR _i := 1 TO GVL.cActiveAxes DO
+    mcSetPos[_i](Axis := GVL.axisRefs[_i]);
+END_FOR
+
+SetPosition_delay.PT := T#1S;
+SetPosition_delay();
+
+CASE init_State OF
+    0:
+        (* Wait for all axes to stop *)
+        _allDone := TRUE;
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            IF GVL.axesIO[_i].moving THEN
+                _allDone := FALSE;
+            END_IF
+        END_FOR
+        IF _allDone THEN
+            init_State := 1;
+        END_IF
+
+    1:
+        IF NOT GVL.initStatus THEN
+            FOR _i := 1 TO GVL.cActiveAxes DO
+                mcSetPos[_i].Position := GVL.axesCfg[_i].currentPositionRetain;
+                mcSetPos[_i].Execute := TRUE;
+            END_FOR
+            SetPosition_delay.IN := TRUE;
+            init_State := 2;
+        END_IF
+
+    2:
+        _allDone := TRUE;
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            IF NOT mcSetPos[_i].Done THEN
+                _allDone := FALSE;
+            END_IF
+        END_FOR
+        IF _allDone THEN
+            init_State := 88;
+        END_IF
+        IF SetPosition_delay.Q THEN
+            init_State := -100;
+        END_IF
+
+    88:
+        GVL.initStatus := TRUE;
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            mcSetPos[_i].Execute := FALSE;
+        END_FOR
+        SetPosition_delay.IN := FALSE;
+        init_State := 0;
+
+    -100:
+        GVL.initStatus := FALSE;
+        SetPosition_delay.IN := FALSE;
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            mcSetPos[_i].Execute := FALSE;
+        END_FOR
+        GVL.Error := TRUE;
+        GVL.ErrorId := 1;
+        GVL.ErrorDescription := 'init fail';
+END_CASE
+
+(* After init, continuously update position retain from NC feedback *)
+IF GVL.initStatus THEN
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        GVL.axesCfg[_i].currentPositionRetain := LREAL_TO_REAL(GVL.axisRefs[_i].NcToPlc.ActPos);
+        GVL.axesIO[_i].currentVelocity := LREAL_TO_REAL(GVL.axisRefs[_i].NcToPlc.ActVelo);
+    END_FOR
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_InitRecipeParameters" Id="{3e743185-e636-4d7d-8c9e-3b7c93f0c822}">
+      <Implementation>
+        <ST><![CDATA[CASE state_loadParameters OF
+    0:
+        LoadParameter := TRUE;
+        Read_R_TRIG(CLK := LoadParameter);
+        IF Read_R_TRIG.Q THEN
+            state_loadParameters := 1;
+        END_IF
+    1:
+        ReturnDwordLoad := RecipeManCommands.LoadAndWriteRecipe(
+            RecipeDefinitionName := 'Recipes',
+            RecipeName := 'Parameters'
+        );
+        LoadParameter := FALSE;
+        IF ReturnDwordLoad <> 0 THEN
+            state_loadParameters := -100;
+        ELSE
+            LoadRecipeParameters := TRUE;
+            LoadParameter := FALSE;
+            state_loadParameters := 88;
+        END_IF
+    88:
+        loadParametersDone := TRUE;
+    -100:
+        loadParametersDone := FALSE;
+        GVL.Error := TRUE;
+        GVL.ErrorId := 101;
+        GVL.ErrorDescription := 'LoadRecipeParameters Error';
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_MapHWIO" Id="{f2000001-0000-0000-0000-000000000001}">
+      <Implementation>
+        <ST><![CDATA[(* ============================================================
+   Map individual hardware IO variables to axis IO struct arrays
+   Must be called every cycle before FB execution
+   ============================================================ *)
+GVL.axesIO[1].forwardLimit := GVL.forwardLimit_In1;
+GVL.axesIO[1].backwardLimit := GVL.backwardLimit_In1;
+GVL.axesIO[1].lvdtRaw := GVL.LVDT_In1;
+
+GVL.axesIO[2].forwardLimit := GVL.forwardLimit_In2;
+GVL.axesIO[2].backwardLimit := GVL.backwardLimit_In2;
+GVL.axesIO[2].lvdtRaw := GVL.LVDT_In2;
+
+GVL.axesIO[3].forwardLimit := GVL.forwardLimit_In3;
+GVL.axesIO[3].backwardLimit := GVL.backwardLimit_In3;
+GVL.axesIO[3].lvdtRaw := GVL.LVDT_In3;
+
+GVL.axesIO[4].forwardLimit := GVL.forwardLimit_In4;
+GVL.axesIO[4].backwardLimit := GVL.backwardLimit_In4;
+GVL.axesIO[4].lvdtRaw := GVL.LVDT_In4;
+
+GVL.axesIO[5].forwardLimit := GVL.forwardLimit_In5;
+GVL.axesIO[5].backwardLimit := GVL.backwardLimit_In5;
+GVL.axesIO[5].lvdtRaw := GVL.LVDT_In5;
+
+GVL.axesIO[6].forwardLimit := GVL.forwardLimit_In6;
+GVL.axesIO[6].backwardLimit := GVL.backwardLimit_In6;
+GVL.axesIO[6].lvdtRaw := GVL.LVDT_In6;
+
+GVL.axesIO[7].forwardLimit := GVL.forwardLimit_In7;
+GVL.axesIO[7].backwardLimit := GVL.backwardLimit_In7;
+GVL.axesIO[7].lvdtRaw := GVL.LVDT_In7;
+
+GVL.axesIO[8].forwardLimit := GVL.forwardLimit_In8;
+GVL.axesIO[8].backwardLimit := GVL.backwardLimit_In8;
+GVL.axesIO[8].lvdtRaw := GVL.LVDT_In8;]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A_RestartTC" Id="{737d9420-c364-46ec-805e-ce283c214994}">
+      <Implementation>
+        <ST><![CDATA[(* axesCfg is PERSISTENT — survives restart automatically.
+   Call FB first so RESTART gets TRUE, then clear both flags. *)
+RestartTC(NETID := , RESTART := GVL.m_restartTC, TMOUT := );
+IF GVL.m_restartTC THEN
+    GVL.m_restartTC := FALSE;
+    GVL.MOD_m_restartTC := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="AxisAll_Motion" Id="{f2000003-0000-0000-0000-000000000003}">
+      <Implementation>
+        <ST><![CDATA[(* ============================================================
+   Broadcast all-axis commands to all active axes
+   ============================================================ *)
+GVL.RTrig_Move_AxisAll(CLK := GVL.btn_Move_AxisAll);
+IF GVL.RTrig_Move_AxisAll.Q THEN
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        GVL.axesIO[_i].btnMove := TRUE;
+    END_FOR
+END_IF
+
+GVL.RTrig_Stop_AxisAll(CLK := GVL.btn_Stop_AxisAll);
+IF GVL.RTrig_Stop_AxisAll.Q THEN
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        GVL.axesIO[_i].btnStop := TRUE;
+    END_FOR
+END_IF
+
+GVL.RTrig_JogForward_AxisAll(CLK := GVL.btn_JogForward_AxisAll);
+IF GVL.RTrig_JogForward_AxisAll.Q THEN
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        GVL.axesIO[_i].btnJogForward := TRUE;
+    END_FOR
+END_IF
+
+GVL.RTrig_JogBackward_AxisAll(CLK := GVL.btn_JogBackward_AxisAll);
+IF GVL.RTrig_JogBackward_AxisAll.Q THEN
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        GVL.axesIO[_i].btnJogBackward := TRUE;
+    END_FOR
+END_IF
+
+GVL.RTrig_Reset_AxisAll(CLK := GVL.btn_Reset_AxisAll);
+IF GVL.RTrig_Reset_AxisAll.Q THEN
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        GVL.axesIO[_i].btnReset := TRUE;
+    END_FOR
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="modbus" Id="{f2000005-0000-0000-0000-000000000005}">
+      <Implementation>
+        <ST><![CDATA[(* ============================================================
+   Modbus TCP data exchange (EPICS ↔ PLC)
+   ============================================================ *)
+
+(* ---- PLC → EPICS: Status outputs ---- *)
+
+(* Global status *)
+GVL.MOD_E_STOP_led := GVL.E_STOP_led;
+GVL.MOD_Local_led := GVL.Local_led;
+GVL.MOD_Remote_led := GVL.Remote_led;
+GVL.MOD_Error_led := GVL.Error;
+
+(* Per-axis status *)
+FOR _i := 1 TO GVL.cActiveAxes DO
+    (* BOOL status word *)
+    GVL.MOD_AxisStatW[(_i-1)*2].0 := GVL.axesIO[_i].error;
+    GVL.MOD_AxisStatW[(_i-1)*2].1 := GVL.axesIO[_i].moving;
+    GVL.MOD_AxisStatW[(_i-1)*2].2 := GVL.axesIO[_i].forwardLimit;
+    GVL.MOD_AxisStatW[(_i-1)*2].3 := GVL.axesIO[_i].backwardLimit;
+    GVL.MOD_AxisStatW[(_i-1)*2].4 := GVL.axesIO[_i].moveDone;
+    GVL.MOD_AxisStatW[(_i-1)*2].5 := GVL.axesIO[_i].positionSetDone;
+    (* bits 6-15 spare *)
+
+    (* REAL outputs *)
+    GVL.MOD_AxisOutput[(_i-1)*3 + 0] := GVL.axesIO[_i].currentVelocity;
+    GVL.MOD_AxisOutput[(_i-1)*3 + 1] := GVL.axesCfg[_i].currentPositionRetain;
+    GVL.MOD_AxisOutput[(_i-1)*3 + 2] := GVL.axesIO[_i].lvdtPV;
+END_FOR
+
+(* Error info *)
+GVL.MOD_ErrorId := GVL.ErrorId;
+GVL.MOD_ErrorDescription := GVL.ErrorDescription;
+
+(* ---- EPICS → PLC: Command inputs ---- *)
+
+(* Local/Remote mode switch *)
+IF GVL.btn_LocalOrRemote THEN
+    GVL.Local_led := TRUE;
+    GVL.Remote_led := FALSE;
+ELSE
+    GVL.Local_led := FALSE;
+    GVL.Remote_led := TRUE;
+END_IF
+
+(* restartTC — Remote mode: copy from Modbus; Local mode: set directly by HMI *)
+IF GVL.Remote_led THEN
+    GVL.m_restartTC := GVL.MOD_m_restartTC;
+END_IF
+
+(* Remote mode: read commands from Modbus *)
+IF GVL.Remote_led THEN
+    (* Global *)
+    GVL.E_STOP_rem := GVL.MOD_btn_E_STOP;
+
+    (* All-axis commands from remote *)
+    GVL.btn_Move_AxisAll := GVL.MOD_btn_Move_AxisAll;
+    GVL.btn_JogForward_AxisAll := GVL.MOD_btn_JogForward_AxisAll;
+    GVL.btn_JogBackward_AxisAll := GVL.MOD_btn_JogBackward_AxisAll;
+    GVL.btn_Stop_AxisAll := GVL.MOD_btn_Stop_AxisAll;
+    GVL.btn_Reset_AxisAll := GVL.MOD_btn_Reset_AxisAll;
+
+    (* Per-axis commands *)
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        (* BOOL commands *)
+        GVL.axesIO[_i].btnMove := GVL.MOD_AxisCmdW[(_i-1)*2].0;
+        GVL.axesIO[_i].btnJogForward := GVL.MOD_AxisCmdW[(_i-1)*2].1;
+        GVL.axesIO[_i].btnJogBackward := GVL.MOD_AxisCmdW[(_i-1)*2].2;
+        GVL.axesIO[_i].btnStop := GVL.MOD_AxisCmdW[(_i-1)*2].3;
+        GVL.axesIO[_i].btnReset := GVL.MOD_AxisCmdW[(_i-1)*2].4;
+        GVL.axesIO[_i].btnSetPosition := GVL.MOD_AxisCmdW[(_i-1)*2].5;
+        GVL.axesCfg[_i].lvdtFunctionOn := GVL.MOD_AxisCmdW[(_i-1)*2].6;
+        GVL.axesCfg[_i].lvdtManualReleaseAlarm := GVL.MOD_AxisCmdW[(_i-1)*2].7;
+
+        (* REAL params *)
+        GVL.axesCfg[_i].targetPosition := GVL.MOD_AxisParams[(_i-1)*7 + 0];
+        GVL.axesCfg[_i].targetVelocity := GVL.MOD_AxisParams[(_i-1)*7 + 1];
+        GVL.axesCfg[_i].jogStep := GVL.MOD_AxisParams[(_i-1)*7 + 2];
+        GVL.axesCfg[_i].lvdtThreshold := GVL.MOD_AxisParams[(_i-1)*7 + 3];
+        GVL.axesCfg[_i].minPosition := GVL.MOD_AxisParams[(_i-1)*7 + 4];
+        GVL.axesCfg[_i].maxPosition := GVL.MOD_AxisParams[(_i-1)*7 + 5];
+        GVL.axesCfg[_i].positionSetValue := GVL.MOD_AxisParams[(_i-1)*7 + 6];
+    END_FOR
+
+    (* All-axis commands override individual when active *)
+    IF NOT GVL.MOD_btn_Move_AxisAll THEN
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            GVL.axesIO[_i].btnMove := GVL.MOD_AxisCmdW[(_i-1)*2].0;
+        END_FOR
+    ELSE
+        GVL.btn_Move_AxisAll := TRUE;
+    END_IF
+    IF NOT GVL.MOD_btn_Stop_AxisAll THEN
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            GVL.axesIO[_i].btnStop := GVL.MOD_AxisCmdW[(_i-1)*2].3;
+        END_FOR
+    ELSE
+        GVL.btn_Stop_AxisAll := TRUE;
+    END_IF
+    IF NOT GVL.MOD_btn_JogForward_AxisAll THEN
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            GVL.axesIO[_i].btnJogForward := GVL.MOD_AxisCmdW[(_i-1)*2].1;
+        END_FOR
+    ELSE
+        GVL.btn_JogForward_AxisAll := TRUE;
+    END_IF
+    IF NOT GVL.MOD_btn_JogBackward_AxisAll THEN
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            GVL.axesIO[_i].btnJogBackward := GVL.MOD_AxisCmdW[(_i-1)*2].2;
+        END_FOR
+    ELSE
+        GVL.btn_JogBackward_AxisAll := TRUE;
+    END_IF
+    IF NOT GVL.MOD_btn_Reset_AxisAll THEN
+        FOR _i := 1 TO GVL.cActiveAxes DO
+            GVL.axesIO[_i].btnReset := GVL.MOD_AxisCmdW[(_i-1)*2].4;
+        END_FOR
+    ELSE
+        GVL.btn_Reset_AxisAll := TRUE;
+    END_IF
+ELSE
+    (* Local mode: upload current parameters to Modbus for HMI display *)
+    FOR _i := 1 TO GVL.cActiveAxes DO
+        GVL.MOD_AxisParams[(_i-1)*7 + 0] := GVL.axesCfg[_i].targetPosition;
+        GVL.MOD_AxisParams[(_i-1)*7 + 1] := GVL.axesCfg[_i].targetVelocity;
+        GVL.MOD_AxisParams[(_i-1)*7 + 2] := GVL.axesCfg[_i].jogStep;
+        GVL.MOD_AxisParams[(_i-1)*7 + 3] := GVL.axesCfg[_i].lvdtThreshold;
+        GVL.MOD_AxisParams[(_i-1)*7 + 4] := GVL.axesCfg[_i].minPosition;
+        GVL.MOD_AxisParams[(_i-1)*7 + 5] := GVL.axesCfg[_i].maxPosition;
+        GVL.MOD_AxisParams[(_i-1)*7 + 6] := GVL.axesCfg[_i].positionSetValue;
+    END_FOR
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="simu" Id="{f2000004-0000-0000-0000-000000000004}">
+      <Implementation>
+        <ST><![CDATA[(* ============================================================
+   Simulation mode — bypass hardware inputs
+   ============================================================ *)
+IF GVL.simulation THEN
+    //FOR _i := 1 TO GVL.cActiveAxes DO
+    //    GVL.axesIO[_i].forwardLimit := TRUE;
+    //    GVL.axesIO[_i].backwardLimit := TRUE;
+    //END_FOR
+    GVL.E_STOP := TRUE;
+    GVL.E_STOP_led := TRUE;
+ELSE
+    GVL.E_STOP := GVL.E_STOP_In;
+    GVL.E_STOP_led := GVL.E_STOP_In;
+    (* Note: limit switch IO is handled in A_MapHWIO before simu *)
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="MAIN">
+      <LineId Id="3" Count="28" />
+      <LineId Id="33" Count="3" />
+      <LineId Id="97" Count="1" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="38" Count="3" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_init">
+      <LineId Id="2" Count="82" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_InitRecipeParameters">
+      <LineId Id="2" Count="26" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_MapHWIO">
+      <LineId Id="2" Count="33" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.A_RestartTC">
+      <LineId Id="2" Count="4" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="8" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.AxisAll_Motion">
+      <LineId Id="2" Count="35" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.modbus">
+      <LineId Id="2" Count="127" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="131" Count="1" />
+    </LineIds>
+    <LineIds Name="MAIN.simu">
+      <LineId Id="2" Count="13" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

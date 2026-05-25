@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <DUT Name="ST_AxisConfig" Id="{5e7afc7f-fbae-421a-9118-4f359d353de0}">
+    <Declaration><![CDATA[TYPE ST_AxisConfig :
+STRUCT
+    (* Soft limits *)
+    minPosition: REAL;
+    maxPosition: REAL;
+
+    (* Motion parameters *)
+    targetPosition: REAL;
+    targetVelocity: REAL := 0.2;
+    jogStep: REAL;
+
+    (* SetPosition *)
+    positionSetValue: REAL;
+
+    (* LVDT sensor *)
+    lvdtThreshold: REAL;
+    lvdtFunctionOn: BOOL := TRUE;
+    lvdtManualReleaseAlarm: BOOL;
+    scalingFactor_LVDT: REAL := 1;
+
+    (* Position retain (survives power cycle) *)
+    currentPositionRetain: REAL;
+
+    (* Axis name for error messages *)
+    name: STRING(30);
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

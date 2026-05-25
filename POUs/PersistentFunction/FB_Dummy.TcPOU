@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <POU Name="FB_Dummy" Id="{37911085-6bab-497f-b26d-a7b12a14f0b2}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Dummy
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	(* not persistent variables ... *)
+	iCounter		: UDINT;			(* non persistent counter *)
+END_VAR
+VAR PERSISTENT
+	(* persistent variables ... *)
+	iCounter_P		: UDINT;			(* persistent counter *)
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[iCounter 	:= iCounter + 1;
+iCounter_P	:= iCounter_P + 1;
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Dummy">
+      <LineId Id="13" Count="2" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

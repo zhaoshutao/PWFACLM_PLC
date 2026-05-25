@@ -1,0 +1,180 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <GVL Name="GVL" Id="{a75fe4eb-9322-4c82-86a9-bd49701e9f2e}">
+    <Declaration><![CDATA[
+{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+    cMaxAxes : UINT := 8;   (* Change this to add/remove axes without touching code *)
+    cActiveAxes : UINT := 8; (* Currently active axes; increase as you add hardware *)
+END_VAR
+
+VAR_GLOBAL
+    (* ================================================================
+       Global control signals
+       ================================================================ *)
+    simulation: BOOL;
+    btn_LocalOrRemote: BOOL := FALSE;
+    E_STOP: BOOL; (*急停NC*)
+    E_STOP_In AT %I*: BOOL; (*急停NC*)
+    E_STOP_rem: BOOL := TRUE; (*远程急停*)
+    initStatus: BOOL;
+
+    E_STOP_led: BOOL; (*急停指示*)
+    Local_led: BOOL; (*本地模式指示*)
+    Remote_led: BOOL; (*远程模式指示*)
+    Error: BOOL;
+    ErrorId: INT;
+    ErrorDescription: STRING;
+
+    (* Plc_EmergencyStop *)
+    Plc_EmergencyStop AT %Q*: BOOL := TRUE;
+    CabinetEStopRelayTrigged AT %I*: BOOL; (*normal:1,trigged:0*)
+    SoftEStopRelayTrigged AT %I*: BOOL; (*normal:1,trigged:0*)
+
+    m_restartTC: BOOL := FALSE;
+    E_STOP_ftring: F_TRIG;
+    E_STOP_rem_ftring: F_TRIG;
+
+    (* ================================================================
+       Axis arrays — add axes by changing cActiveAxes
+       ================================================================ *)
+    (* NC axis references — link in System Manager *)
+    axisRefs: ARRAY[1..cMaxAxes] OF AXIS_REF;
+
+    (* Axis runtime I/O *)
+    axesIO: ARRAY[1..cMaxAxes] OF ST_AxisIO;
+
+    (* ================================================================
+       Hardware IO — each axis individually mapped in System Manager
+       (cannot use arrays because IO addresses may not be sequential)
+       ================================================================ *)
+    (* Axis 1 HW inputs *)
+    forwardLimit_In1 AT %I*: BOOL;
+    backwardLimit_In1 AT %I*: BOOL; (*1#电机负向限位.靠近束流*)
+    LVDT_In1 AT %I*: INT; (*1#LVDT*)
+
+    (* Axis 2 HW inputs *)
+    forwardLimit_In2 AT %I*: BOOL;
+    backwardLimit_In2 AT %I*: BOOL;
+    LVDT_In2 AT %I*: INT; (*2#LVDT*)
+
+    (* Axis 3-8 HW inputs — uncomment and link as you add axes *)
+    forwardLimit_In3 AT %I*: BOOL;
+    backwardLimit_In3 AT %I*: BOOL;
+    LVDT_In3 AT %I*: INT;
+
+    forwardLimit_In4 AT %I*: BOOL;
+    backwardLimit_In4 AT %I*: BOOL;
+    LVDT_In4 AT %I*: INT;
+
+    forwardLimit_In5 AT %I*: BOOL;
+    backwardLimit_In5 AT %I*: BOOL;
+    LVDT_In5 AT %I*: INT;
+
+    forwardLimit_In6 AT %I*: BOOL;
+    backwardLimit_In6 AT %I*: BOOL;
+    LVDT_In6 AT %I*: INT;
+
+    forwardLimit_In7 AT %I*: BOOL;
+    backwardLimit_In7 AT %I*: BOOL;
+    LVDT_In7 AT %I*: INT;
+
+    forwardLimit_In8 AT %I*: BOOL;
+    backwardLimit_In8 AT %I*: BOOL;
+    LVDT_In8 AT %I*: INT;
+
+    (* ================================================================
+       All-axis combined commands
+       ================================================================ *)
+    btn_Move_AxisAll: BOOL;
+    RTrig_Move_AxisAll: R_TRIG;
+    btn_Stop_AxisAll: BOOL;
+    RTrig_Stop_AxisAll: R_TRIG;
+    btn_JogForward_AxisAll: BOOL;
+    RTrig_JogForward_AxisAll: R_TRIG;
+    btn_JogBackward_AxisAll: BOOL;
+    RTrig_JogBackward_AxisAll: R_TRIG;
+    btn_Reset_AxisAll: BOOL;
+    RTrig_Reset_AxisAll: R_TRIG;
+
+    (* ================================================================
+       Modbus communication area (EPICS ↔ PLC)
+       ================================================================
+       Layout:
+         Global controls:   %MW0  (1 WORD = 16 bits)
+         All-axis commands: %MW2  (1 WORD)
+         Per-axis commands: %MW4  (2 WORDs × 8 axes = 16 WORDs)
+         Per-axis params:   %MB200 (7 REALs × 8 axes = 56 REALs)
+         Per-axis status:   %MW300 (2 WORDs × 8 axes = 16 WORDs)
+         Per-axis outputs:  %MB700 (3 REALs × 8 axes = 24 REALs)
+         Error info:        %MB800 (INT + STRING)
+       ================================================================ *)
+
+    (* ---- EPICS → PLC: Command inputs ---- *)
+
+    (* Global controls — Word 0 (%MW0) *)
+    MOD_btn_LocalOrRemote AT %MX0.0: BOOL;
+    MOD_btn_E_STOP        AT %MX0.1: BOOL := TRUE;
+    MOD_m_restartTC       AT %MX0.2: BOOL;
+    (* %MX0.3–%MX0.15 spare *)
+
+    (* All-axis combined commands — Word 1 (%MW2) *)
+    MOD_btn_Move_AxisAll        AT %MX2.0: BOOL;
+    MOD_btn_JogForward_AxisAll  AT %MX2.1: BOOL;
+    MOD_btn_JogBackward_AxisAll AT %MX2.2: BOOL;
+    MOD_btn_Stop_AxisAll        AT %MX2.3: BOOL;
+    MOD_btn_Reset_AxisAll       AT %MX2.4: BOOL;
+    (* %MX2.5–%MX3.7 spare *)
+
+    (* Per-axis BOOL commands — Word 2–17 (%MW4–%MW18)
+       Each axis: 1 WORD (8 bits used, 8 spare)
+         bit 0: Move      bit 4: Reset
+         bit 1: Jog+      bit 5: SetPosition
+         bit 2: Jog-      bit 6: LVDT_FunctionOn
+         bit 3: Stop      bit 7: LVDT_ManualRelease
+       Axis 1 at Word 2 (%MX4.x), Axis N at Word (2+N*2) (%MX(4+(N-1)*4).x)
+    *)
+    MOD_AxisCmdW AT %MW4: ARRAY[0..15] OF WORD; (* 8 axes × 2 words *)
+
+    (* Per-axis REAL parameters — %MB200, 7 REALs per axis, 8 axes *)
+    MOD_AxisParams AT %MB200: ARRAY[0..55] OF REAL;
+    (* Layout per axis (28 bytes = 7 REALs):
+       [0] targetPosition    [4] minPosition
+       [1] targetVelocity    [5] maxPosition
+       [2] jogStep           [6] positionSetValue
+       [3] lvdtThreshold
+    *)
+
+    (* ---- PLC → EPICS: Status outputs ---- *)
+
+    (* Global status — Word 100 (%MW200) *)
+    MOD_E_STOP_led  AT %MX400.0: BOOL;
+    MOD_Local_led   AT %MX400.1: BOOL;
+    MOD_Remote_led  AT %MX400.2: BOOL;
+    MOD_Error_led   AT %MX400.3: BOOL;
+
+    (* Per-axis BOOL status — Word 150–165 (%MW300–%MW330)
+       Each axis: 1 WORD (6 bits used, 10 spare)
+         bit 0: error          bit 3: backwardLimit
+         bit 1: moving         bit 4: moveDone
+         bit 2: forwardLimit   bit 5: positionSetDone
+    *)
+    MOD_AxisStatW AT %MW600: ARRAY[0..15] OF WORD;
+
+    (* Per-axis REAL outputs — %MB700, 3 REALs per axis, 8 axes *)
+    MOD_AxisOutput AT %MB700: ARRAY[0..23] OF REAL;
+    (* Layout per axis (12 bytes = 3 REALs):
+       [0] currentVelocity  [1] currentPosition  [2] lvdtPV
+    *)
+
+    (* Error info *)
+    MOD_ErrorId           AT %MB800: INT;
+    MOD_ErrorDescription  AT %MB804: STRING;
+END_VAR
+
+VAR_GLOBAL PERSISTENT
+    (* Axis configuration — survives TC_Restart and UPS power cycle *)
+    axesCfg: ARRAY[1..cMaxAxes] OF ST_AxisConfig;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

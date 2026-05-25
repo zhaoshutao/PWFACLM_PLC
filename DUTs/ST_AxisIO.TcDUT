@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <DUT Name="ST_AxisIO" Id="{df26c381-454c-4e4c-878a-be2ce99cc3ba}">
+    <Declaration><![CDATA[TYPE ST_AxisIO :
+STRUCT
+    (* Limit switches *)
+    forwardLimit: BOOL := TRUE;
+    forwardLimitSimu: BOOL;
+    backwardLimit: BOOL;
+    backwardLimitSimu: BOOL;
+    touchLimitSwitch: BOOL;
+
+    (* LVDT sensor *)
+    lvdtRaw: INT;
+    lvdtScaled: REAL;
+    lvdtPV: REAL;
+    lvdtOutOfThreshold: BOOL := TRUE;
+    lvdtOnceInRangeFlag: INT;
+
+    (* Control buttons (set by HMI or Modbus) *)
+    btnMove: BOOL;
+    btnJogForward: BOOL;
+    btnJogBackward: BOOL;
+    btnStop: BOOL;
+    btnReset: BOOL;
+    btnSetPosition: BOOL;
+
+    (* Status outputs *)
+    error: BOOL;
+    moving: BOOL;
+    moveDone: BOOL;
+    positionSetDone: BOOL;
+    currentVelocity: REAL;
+
+    (* HMI button interlock outputs *)
+    btnJogFwdEnabled: BOOL;
+    btnJogBwdEnabled: BOOL;
+    btnMoveEnabled: BOOL;
+    btnStopEnabled: BOOL;
+    btnSetPosEnabled: BOOL;
+
+    (* Internal flags *)
+    inputPositionOutOfRange: BOOL;
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

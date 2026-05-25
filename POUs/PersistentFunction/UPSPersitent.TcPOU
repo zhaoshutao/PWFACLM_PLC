@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <POU Name="UPSPersitent" Id="{30b3bcc2-8c2f-4b7d-a350-e565215dc01b}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM UPSPersitent
+VAR
+		 
+	 (* UPS related ... *)
+	fbUPS			: FB_S_UPS_CX51x0;			(* UPS-FB instance *)
+					(* Default Values of FB_S_UPS_CX51x0-Inputs:
+						sNetID 			:= '' ==> local netid
+						iPLCPort 		:= AMSPORT_R0_PLC_RTS1 ==> 801 = 1st Runtime System
+						iUPSPort		:= 16#588 ==> Port for reading Power State of UPS
+						tTimeout 		:= DEFAULT_ADS_TIMEOUT ==> 5S
+						eUpsMode 		:= eSUPS_WrPersistData_Shutdown ==> writing persistent data + shutdown
+						ePersistentMode := SPDM_2PASS ==> All data is from same plc cycle, cycletime exceeds possible. Plc stops with the shutdown, a few cycles after writing persistent data. 
+						tRecoverTime 	:= T#10s ==> 10s power to recover from short power failure before eSUPS_PowerOK is reported (in mode eSUPS_WrPersistData_NoShutdown/eSUPS_CheckPowerStatus)
+					*)
+	eUpsMode		: E_S_UPS_Mode	:= eSUPS_WrPersistData_Shutdown; (* UPS mode (writing persistent data + shutdown) *)
+
+	(* !!! TO DO: REPLACE WITH YOUR PLC VARIABLES/FB INSTANCES !!! regular PLC variables/FB instances ... *)
+	iCounter		: UDINT;					(* non persistent counter *)
+	fbMachineFast	: FB_Dummy;					(* demo fb instance *)
+END_VAR
+VAR PERSISTENT
+	(* !!! TO DO: REPLACE WITH YOUR PERSISTENT PLC VARIABLES !!! persistent variables ... *)
+	iCounter_P				: UDINT;			(* persistent counter *)
+	iPowerFailureCounter_P	: UDINT;			(* persistent counter of power failures *)
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* S-UPS Demo *)
+
+(* call UPS-FB instance in first lines of the fastest PLC Task *)
+fbUPS(eUpsMode := eUpsMode);
+(* eUpsMode =							in case of powerfailure:
+	 eSUPS_WrPersistData_Shutdown 		 	writing of persistent data + shutdown
+	 eSUPS_WrPersistData_NoShutdown 		writing of PERSISTENT data, no shutdown
+	 eSUPS_CheckPowerStatus 				reports powerfailure without ACTION (no writing, no shutdown) 
+	 eSUPS_ImmediateShutdown 				skips writing of data, immediate shutdown
+*)
+
+(* evaluate UPS State *)
+IF eGlobalSUpsState = eSUPS_PowerFailure THEN
+	(* first cycle of powerfailure *)
+
+	(* execute code that should only be done once with each powerfailure, i.e. increase powerfailure counter *)
+	iPowerFailureCounter_P := iPowerFailureCounter_P + 1;
+ELSIF eGlobalSUpsState > eSUPS_PowerFailure THEN
+	(* next cycles of powerfailure *)
+
+	(* skip regular code execution for the remaining cycles of the powerfailure/writing of persistent data/quick shutdown  ... *)
+	RETURN;
+END_IF
+
+
+(* !!! TO DO: REPLACE WITH YOUR PLC CODE !!! regular code execution *)
+iCounter := iCounter + 1;
+iCounter_P := iCounter_P + 1;
+
+fbMachineFast();
+]]></ST>
+    </Implementation>
+    <LineIds Name="UPSPersitent">
+      <LineId Id="27" Count="29" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

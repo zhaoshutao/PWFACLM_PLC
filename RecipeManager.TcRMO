@@ -1,0 +1,165 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.6">
+  <RecipeManager Name="RecipeManager" Id="{9c3757cf-7116-40e1-ba2d-d39296d5565c}">
+    <XmlArchive>
+      <Data>
+        <o xml:space="preserve" t="RecipeManObject">
+          <o n="LMGuids" t="LanguageModelGuidHelper">
+            <d n="NamesAndGuids" t="Hashtable" ckt="String" cvt="Guid">
+              <v>GVL_RECIPEMANAGEMENT_3300</v>
+              <v>22d3354e-aea9-45ee-b09a-0a00e79e696c</v>
+              <v>RECIPEFACTORY</v>
+              <v>e8a716d9-61d5-456b-917f-4207abe8402f</v>
+              <v>RECIPEMANAGEMENTINIT</v>
+              <v>ee4120b5-c1bc-49c5-8dfb-1131d5995ca9</v>
+              <v>RECIPEFACTORYFREERECIPE</v>
+              <v>8bbe7508-e483-4175-a1c4-ffbac18e7d59</v>
+              <v>RECIPEFACTORYFB_INIT</v>
+              <v>e24983be-7e7f-43f1-982a-64cb34c742df</v>
+              <v>RECIPEFACTORYCREATERECIPE</v>
+              <v>025c5d36-551b-4b04-81c9-90156964e193</v>
+              <v>RECIPEMANAGEMENTINITFB_INIT</v>
+              <v>ba03818c-3b04-46c9-a342-f352e769688a</v>
+              <v>RECIPEMANAGEMENTINITINITIALIZE</v>
+              <v>73d942a9-5ee5-424d-a81b-7a90a95a4379</v>
+              <v>RECIPEMANAGEMENTINITFB_REINIT</v>
+              <v>132df5e3-cdb5-4034-a2be-73bd12635e1c</v>
+            </d>
+          </o>
+          <o n="StorageSettings" t="RecipeManagerStorageSettings">
+            <v n="StorageType">1U</v>
+            <v n="LoadType">0U</v>
+            <v n="WriteType">0U</v>
+            <v n="FileExtension">".txtrecipe"</v>
+            <v n="FilePath">"C:\CollimatorControlParameters"</v>
+            <v n="TokenSeparator">":="</v>
+            <v n="ColumnList">"0|1"</v>
+            <v n="AutoSaveRecipes">true</v>
+          </o>
+          <v n="RecipesInPlc">true</v>
+          <v n="RecipesInPlcAssigned">false</v>
+        </o>
+      </Data>
+      <TypeList>
+        <Type n="Boolean">System.Boolean</Type>
+        <Type n="Guid">System.Guid</Type>
+        <Type n="Hashtable">System.Collections.Hashtable</Type>
+        <Type n="LanguageModelGuidHelper">{3bce4913-f2c1-4b54-84e8-6d7ec1809176}</Type>
+        <Type n="RecipeManagerStorageSettings">{9af4bea6-fc90-45e0-8fd7-eb50506b56da}</Type>
+        <Type n="RecipeManObject">{09ecc42e-586d-4a08-932f-5bdcac20bb55}</Type>
+        <Type n="String">System.String</Type>
+        <Type n="UInt32">System.UInt32</Type>
+      </TypeList>
+    </XmlArchive>
+    <RecipeDefinition Name="Recipes" Id="{d51afb33-3f66-48ad-ace6-1afefde6aee9}">
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="RecipeDefinitionObject">
+            <v n="UniqueIdGenerator">"14"</v>
+            <o n="Recipes" t="RecipeList">
+              <l n="Recipes" t="ArrayList" />
+            </o>
+            <o n="RecipeVariables" t="RecipeVariableList">
+              <l n="Variables" t="ArrayList" cet="RecipeVariable">
+                <o>
+                  <v n="VarName">"MAIN.CollimatorName"</v>
+                  <v n="VarType" t="TypeClass">String</v>
+                  <v n="VarTypeAsString">"STRING"</v>
+                  <v n="Name">""</v>
+                  <n n="Boundaries" />
+                  <v n="Id">6</v>
+                  <v n="Comment">""</v>
+                  <v n="VarUserDefTypeAsString">"Invalid Type"</v>
+                </o>
+                <o>
+                  <v n="VarName">"MAIN.RecipeDescription"</v>
+                  <v n="VarType" t="TypeClass">String</v>
+                  <v n="VarTypeAsString">"STRING"</v>
+                  <v n="Name">""</v>
+                  <n n="Boundaries" />
+                  <v n="Id">10</v>
+                  <v n="Comment">""</v>
+                  <v n="VarUserDefTypeAsString">"Invalid Type"</v>
+                </o>
+                <o>
+                  <v n="VarName">"MAIN.RecipeSavedDate"</v>
+                  <v n="VarType" t="TypeClass">String</v>
+                  <v n="VarTypeAsString">"STRING"</v>
+                  <v n="Name">""</v>
+                  <n n="Boundaries" />
+                  <v n="Id">14</v>
+                  <v n="Comment">""</v>
+                  <v n="VarUserDefTypeAsString">"Invalid Type"</v>
+                </o>
+                <o>
+                  <v n="VarName">"GVL.axesCfg[1].scalingFactor_LVDT"</v>
+                  <v n="VarType" t="TypeClass">Real</v>
+                  <v n="VarTypeAsString">"REAL"</v>
+                  <v n="Name">""</v>
+                  <o n="Boundaries" t="RecipeVariableBoundaries">
+                    <v n="Type" t="TypeClass">Real</v>
+                    <v n="LowerBound">""</v>
+                    <v n="UpperBound">""</v>
+                  </o>
+                  <v n="Id">1</v>
+                  <v n="Comment">""</v>
+                  <v n="VarUserDefTypeAsString">"REAL"</v>
+                </o>
+                <o>
+                  <v n="VarName">"GVL.axesCfg[2].scalingFactor_LVDT"</v>
+                  <v n="VarType" t="TypeClass">Real</v>
+                  <v n="VarTypeAsString">"REAL"</v>
+                  <v n="Name">""</v>
+                  <o n="Boundaries" t="RecipeVariableBoundaries">
+                    <v n="Type" t="TypeClass">Real</v>
+                    <v n="LowerBound">""</v>
+                    <v n="UpperBound">""</v>
+                  </o>
+                  <v n="Id">2</v>
+                  <v n="Comment">""</v>
+                  <v n="VarUserDefTypeAsString">"REAL"</v>
+                </o>
+              </l>
+            </o>
+            <o n="LMGuids" t="LanguageModelGuidHelper">
+              <d n="NamesAndGuids" t="Hashtable" ckt="String" cvt="Guid">
+                <v>VALUESINIT</v>
+                <v>b70a8ada-c5c1-4d96-9ea1-7042d8e9da43</v>
+                <v>FILLDESCRIPTION</v>
+                <v>485c83e1-ddc2-47ff-a736-643929ef8325</v>
+                <v>NAMESET</v>
+                <v>3dc56fa0-44c0-4cee-8dd7-117af94470ff</v>
+                <v>PRVFILLDATASERVERSTRUCTURES</v>
+                <v>545d2367-be11-454b-a5be-0c16e3747982</v>
+                <v>NAME</v>
+                <v>7d7da1bf-5e12-45e5-9a51-90176e0b0c7d</v>
+                <v>UPDATEFROMDESCRIPTION</v>
+                <v>f5100424-0e92-43b6-b203-a52e5af56986</v>
+                <v>WRITE</v>
+                <v>5fc88198-e403-4297-8739-8d32f2ddad2e</v>
+                <v>REC_DS_PRG__AC58B686F81544DE83A6C10EDB2BF8B8</v>
+                <v>3e8eeb8e-ea45-4390-a529-4f014370aab2</v>
+                <v>READ</v>
+                <v>d07fef0e-1661-4017-9254-e02334f69d68</v>
+              </d>
+            </o>
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="ArrayList">System.Collections.ArrayList</Type>
+          <Type n="Guid">System.Guid</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="Int32">System.Int32</Type>
+          <Type n="LanguageModelGuidHelper">{3bce4913-f2c1-4b54-84e8-6d7ec1809176}</Type>
+          <Type n="RecipeDefinitionObject">{6b3dfb6a-1865-4356-a39b-1fe0ef89651c}</Type>
+          <Type n="RecipeList">{361612e3-b6f9-4397-98a8-756875b9e479}</Type>
+          <Type n="RecipeVariable">{53eb36d9-3360-453b-901e-ca88bd8f0cba}</Type>
+          <Type n="RecipeVariableBoundaries">{27f9af88-23e7-4a13-82aa-c97c4e06a71a}</Type>
+          <Type n="RecipeVariableList">{97841042-ff4f-47b5-923e-538f1387df5a}</Type>
+          <Type n="String">System.String</Type>
+          <Type n="TypeClass">{16f7aa24-038f-444e-9d81-b001bc091d35}</Type>
+        </TypeList>
+      </XmlArchive>
+    </RecipeDefinition>
+  </RecipeManager>
+</TcPlcObject>

@@ -1,0 +1,22 @@
+# TwinCAT compiled / auto-generated
+_CompileInfo/
+_Libraries/
+_Boot/
+Boot/
+*.compileinfo
+*.tpy
+*.tpzip
+*.tizip
+LineIDs.dbg
+*.tmc.ref
+
+# Visual Studio / TC3 Shell
+.vs/
+*.suo
+*.user
+
+# System junk
+Thumbs.db
+desktop.ini
+.bundle
+*.tsproj.bak
