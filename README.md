@@ -1,1 +1,1 @@
-# HEPSCollimator
+# PWFACollimator
