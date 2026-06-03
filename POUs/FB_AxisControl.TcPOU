@@ -384,6 +384,9 @@ ELSE
     setPosDelay.IN := FALSE;
 END_IF
 
+IF NOT IO.btnSetPosition THEN
+    IO.positionSetDone := FALSE;
+END_IF
 (* ============================================================
    Emergency stop handler
    ============================================================ *)
@@ -518,7 +521,10 @@ END_IF]]></ST>
       <LineId Id="502" Count="0" />
       <LineId Id="484" Count="0" />
       <LineId Id="503" Count="0" />
-      <LineId Id="192" Count="224" />
+      <LineId Id="192" Count="120" />
+      <LineId Id="512" Count="0" />
+      <LineId Id="510" Count="1" />
+      <LineId Id="313" Count="103" />
       <LineId Id="2" Count="0" />
     </LineIds>
   </POU>

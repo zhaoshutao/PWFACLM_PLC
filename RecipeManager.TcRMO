@@ -10,20 +10,20 @@
               <v>22d3354e-aea9-45ee-b09a-0a00e79e696c</v>
               <v>RECIPEFACTORY</v>
               <v>e8a716d9-61d5-456b-917f-4207abe8402f</v>
-              <v>RECIPEMANAGEMENTINIT</v>
-              <v>ee4120b5-c1bc-49c5-8dfb-1131d5995ca9</v>
+              <v>RECIPEMANAGEMENTINITFB_INIT</v>
+              <v>ba03818c-3b04-46c9-a342-f352e769688a</v>
               <v>RECIPEFACTORYFREERECIPE</v>
               <v>8bbe7508-e483-4175-a1c4-ffbac18e7d59</v>
               <v>RECIPEFACTORYFB_INIT</v>
               <v>e24983be-7e7f-43f1-982a-64cb34c742df</v>
-              <v>RECIPEFACTORYCREATERECIPE</v>
-              <v>025c5d36-551b-4b04-81c9-90156964e193</v>
-              <v>RECIPEMANAGEMENTINITFB_INIT</v>
-              <v>ba03818c-3b04-46c9-a342-f352e769688a</v>
-              <v>RECIPEMANAGEMENTINITINITIALIZE</v>
-              <v>73d942a9-5ee5-424d-a81b-7a90a95a4379</v>
               <v>RECIPEMANAGEMENTINITFB_REINIT</v>
               <v>132df5e3-cdb5-4034-a2be-73bd12635e1c</v>
+              <v>RECIPEMANAGEMENTINIT</v>
+              <v>ee4120b5-c1bc-49c5-8dfb-1131d5995ca9</v>
+              <v>RECIPEMANAGEMENTINITINITIALIZE</v>
+              <v>73d942a9-5ee5-424d-a81b-7a90a95a4379</v>
+              <v>RECIPEFACTORYCREATERECIPE</v>
+              <v>025c5d36-551b-4b04-81c9-90156964e193</v>
             </d>
           </o>
           <o n="StorageSettings" t="RecipeManagerStorageSettings">
@@ -55,7 +55,7 @@
       <XmlArchive>
         <Data>
           <o xml:space="preserve" t="RecipeDefinitionObject">
-            <v n="UniqueIdGenerator">"14"</v>
+            <v n="UniqueIdGenerator">"24"</v>
             <o n="Recipes" t="RecipeList">
               <l n="Recipes" t="ArrayList" />
             </o>
@@ -88,6 +88,30 @@
                   <v n="Name">""</v>
                   <n n="Boundaries" />
                   <v n="Id">14</v>
+                  <v n="Comment">""</v>
+                  <v n="VarUserDefTypeAsString">"Invalid Type"</v>
+                </o>
+                <o>
+                  <v n="VarName">"GVL.simulation"</v>
+                  <v n="VarType" t="TypeClass">Bool</v>
+                  <v n="VarTypeAsString">"BOOL"</v>
+                  <v n="Name">""</v>
+                  <o n="Boundaries" t="RecipeVariableBoundaries">
+                    <v n="Type" t="TypeClass">Bool</v>
+                    <v n="LowerBound">""</v>
+                    <v n="UpperBound">""</v>
+                  </o>
+                  <v n="Id">20</v>
+                  <v n="Comment">""</v>
+                  <v n="VarUserDefTypeAsString">"Invalid Type"</v>
+                </o>
+                <o>
+                  <v n="VarName">"GVL.btn_LocalOrRemote"</v>
+                  <v n="VarType" t="TypeClass">Bool</v>
+                  <v n="VarTypeAsString">"BOOL"</v>
+                  <v n="Name">""</v>
+                  <n n="Boundaries" />
+                  <v n="Id">24</v>
                   <v n="Comment">""</v>
                   <v n="VarUserDefTypeAsString">"Invalid Type"</v>
                 </o>
