@@ -42,6 +42,9 @@ VAR
     mJogDistance: LREAL;
     mJogVelocity: LREAL;
     mSetPosValue: LREAL;
+	
+	fTrigJogBackward: F_TRIG;
+	fTrigJogForward: F_TRIG;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ============================================================
@@ -115,7 +118,14 @@ IF IO.btnMove THEN
     END_IF
 END_IF
 
-IF IO.btnJogForward THEN
+(* ============================================================
+   Running status
+   ============================================================ *)
+Axis.ReadStatus();
+IO.moving := Axis.Status.Moving;
+(*
+//fTrigJogForward(CLK:=IO.btnJogForward);
+IF IO.btnJogForward AND jState <> 3 THEN
     IF Cfg.currentPositionRetain + Cfg.jogStep <= Cfg.maxPosition THEN
         IO.inputPositionOutOfRange := FALSE;
         GVL.Error := FALSE;
@@ -126,11 +136,12 @@ IF IO.btnJogForward THEN
         GVL.Error := TRUE;
         GVL.ErrorId := 1002;
         GVL.ErrorDescription := CONCAT('exceed ', CONCAT(Cfg.name, '_maxPosition'));
-        RETURN;
+		RETURN;
     END_IF
 END_IF
 
-IF IO.btnJogBackward THEN
+//fTrigJogBackward(CLK:=IO.btnJogBackward);
+IF IO.btnJogBackward AND jState <> 3 THEN
     IF Cfg.currentPositionRetain - Cfg.jogStep >= Cfg.minPosition THEN
         IO.inputPositionOutOfRange := FALSE;
         GVL.Error := FALSE;
@@ -141,15 +152,12 @@ IF IO.btnJogBackward THEN
         GVL.Error := TRUE;
         GVL.ErrorId := 1003;
         GVL.ErrorDescription := CONCAT('less than ', CONCAT(Cfg.name, '_minPosition'));
-        RETURN;
+		IO.btnStop:=TRUE;
+		RETURN;
     END_IF
 END_IF
 
-(* ============================================================
-   Running status
-   ============================================================ *)
-Axis.ReadStatus();
-IO.moving := Axis.Status.Moving;
+*)
 
 (* Error status from NC *)
 IF Axis.NcToPlc.ErrorCode = 0 THEN
@@ -227,12 +235,33 @@ CASE jState OF
     2:
         mJogDistance := Cfg.jogStep;
         mJogVelocity := Cfg.targetVelocity;
-        IF IO.btnJogForward AND NOT IO.btnJogBackward THEN
-            jState := 3;
-        END_IF
-        IF IO.btnJogBackward AND NOT IO.btnJogForward THEN
-            jState := 3;
-        END_IF
+		
+		IF IO.btnJogForward AND NOT IO.btnJogBackward THEN
+			IF Cfg.currentPositionRetain + Cfg.jogStep <= Cfg.maxPosition THEN
+				GVL.Error := FALSE;
+				GVL.ErrorId := 0;
+				jState := 3;
+			ELSE
+				IO.btnJogForward := FALSE;          // ← 立即清按钮，防 Modbus 重写
+				GVL.Error := TRUE;
+				GVL.ErrorId := 1002;
+				GVL.ErrorDescription := CONCAT('exceed ', CONCAT(Cfg.name, '_maxPosition'));
+			END_IF
+		END_IF
+		
+		IF IO.btnJogBackward AND NOT IO.btnJogForward THEN
+			IF Cfg.currentPositionRetain - Cfg.jogStep >= Cfg.minPosition THEN
+				GVL.Error := FALSE;
+				GVL.ErrorId := 0;
+				jState := 3;
+			ELSE
+				IO.btnJogBackward := FALSE;         // ← 同上
+				GVL.Error := TRUE;
+				GVL.ErrorId := 1003;
+				GVL.ErrorDescription := CONCAT('less than ', CONCAT(Cfg.name, '_minPosition'));
+			END_IF
+		END_IF
+	
     3:
         (* Buttons kept TRUE so MC_Jog sees them next cycle; cleared in state 88/-100 *)
         IF MC_Jog.Error THEN
@@ -460,5 +489,37 @@ ELSE
     IO.btnStopEnabled := FALSE;
 END_IF]]></ST>
     </Implementation>
+    <LineIds Name="FB_AxisControl">
+      <LineId Id="3" Count="69" />
+      <LineId Id="469" Count="3" />
+      <LineId Id="468" Count="0" />
+      <LineId Id="474" Count="0" />
+      <LineId Id="477" Count="0" />
+      <LineId Id="73" Count="11" />
+      <LineId Id="480" Count="0" />
+      <LineId Id="86" Count="1" />
+      <LineId Id="478" Count="0" />
+      <LineId Id="88" Count="11" />
+      <LineId Id="482" Count="0" />
+      <LineId Id="481" Count="0" />
+      <LineId Id="101" Count="1" />
+      <LineId Id="462" Count="0" />
+      <LineId Id="467" Count="0" />
+      <LineId Id="109" Count="76" />
+      <LineId Id="483" Count="0" />
+      <LineId Id="485" Count="1" />
+      <LineId Id="506" Count="1" />
+      <LineId Id="487" Count="4" />
+      <LineId Id="504" Count="0" />
+      <LineId Id="492" Count="3" />
+      <LineId Id="508" Count="1" />
+      <LineId Id="496" Count="5" />
+      <LineId Id="505" Count="0" />
+      <LineId Id="502" Count="0" />
+      <LineId Id="484" Count="0" />
+      <LineId Id="503" Count="0" />
+      <LineId Id="192" Count="224" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
   </POU>
 </TcPlcObject>

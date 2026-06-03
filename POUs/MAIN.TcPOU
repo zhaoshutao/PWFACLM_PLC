@@ -453,10 +453,12 @@ END_IF]]></ST>
    Simulation mode — bypass hardware inputs
    ============================================================ *)
 IF GVL.simulation THEN
+	(*	*)
     FOR _i := 1 TO GVL.cActiveAxes DO
         GVL.axesIO[_i].forwardLimit := TRUE;
         GVL.axesIO[_i].backwardLimit := TRUE;
     END_FOR
+
     GVL.E_STOP := TRUE;
     GVL.E_STOP_led := TRUE;
 ELSE
@@ -502,7 +504,11 @@ END_IF]]></ST>
       <LineId Id="131" Count="1" />
     </LineIds>
     <LineIds Name="MAIN.simu">
-      <LineId Id="2" Count="13" />
+      <LineId Id="2" Count="3" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="6" Count="3" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="10" Count="5" />
       <LineId Id="1" Count="0" />
     </LineIds>
   </POU>
