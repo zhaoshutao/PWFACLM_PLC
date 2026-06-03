@@ -12,6 +12,7 @@ STRUCT
 
     (* LVDT sensor *)
     lvdtRaw: INT;
+	lvdtmA:REAL;
     lvdtScaled: REAL;
     lvdtPV: REAL;
     lvdtOutOfThreshold: BOOL := TRUE;

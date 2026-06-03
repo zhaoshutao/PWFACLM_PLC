@@ -427,8 +427,10 @@ END_IF
 (* ============================================================
    LVDT sensor processing
    ============================================================ *)
-IO.lvdtScaled := INT_TO_REAL(IO.lvdtRaw) / 32767.0 * 10.0;
-IO.lvdtPV := IO.lvdtScaled / Cfg.scalingFactor_LVDT;
+//raw data convert mA
+IO.lvdtmA:=(INT_TO_REAL(IO.lvdtRaw)/32767)*16+4;
+//mA convert to actual position:4-20mA → -10~40mm
+IO.lvdtPV:= ((IO.lvdtmA-4.0)/16.0)*50.0-10;
 
 IF Cfg.lvdtFunctionOn THEN
     IF IO.lvdtPV <= Cfg.lvdtThreshold THEN
@@ -524,7 +526,12 @@ END_IF]]></ST>
       <LineId Id="192" Count="120" />
       <LineId Id="512" Count="0" />
       <LineId Id="510" Count="1" />
-      <LineId Id="313" Count="103" />
+      <LineId Id="313" Count="40" />
+      <LineId Id="515" Count="0" />
+      <LineId Id="513" Count="0" />
+      <LineId Id="516" Count="0" />
+      <LineId Id="514" Count="0" />
+      <LineId Id="356" Count="60" />
       <LineId Id="2" Count="0" />
     </LineIds>
   </POU>

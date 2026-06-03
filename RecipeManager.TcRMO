@@ -110,38 +110,14 @@
                   <v n="VarType" t="TypeClass">Bool</v>
                   <v n="VarTypeAsString">"BOOL"</v>
                   <v n="Name">""</v>
-                  <n n="Boundaries" />
+                  <o n="Boundaries" t="RecipeVariableBoundaries">
+                    <v n="Type" t="TypeClass">Bool</v>
+                    <v n="LowerBound">""</v>
+                    <v n="UpperBound">""</v>
+                  </o>
                   <v n="Id">24</v>
                   <v n="Comment">""</v>
                   <v n="VarUserDefTypeAsString">"Invalid Type"</v>
-                </o>
-                <o>
-                  <v n="VarName">"GVL.axesCfg[1].scalingFactor_LVDT"</v>
-                  <v n="VarType" t="TypeClass">Real</v>
-                  <v n="VarTypeAsString">"REAL"</v>
-                  <v n="Name">""</v>
-                  <o n="Boundaries" t="RecipeVariableBoundaries">
-                    <v n="Type" t="TypeClass">Real</v>
-                    <v n="LowerBound">""</v>
-                    <v n="UpperBound">""</v>
-                  </o>
-                  <v n="Id">1</v>
-                  <v n="Comment">""</v>
-                  <v n="VarUserDefTypeAsString">"REAL"</v>
-                </o>
-                <o>
-                  <v n="VarName">"GVL.axesCfg[2].scalingFactor_LVDT"</v>
-                  <v n="VarType" t="TypeClass">Real</v>
-                  <v n="VarTypeAsString">"REAL"</v>
-                  <v n="Name">""</v>
-                  <o n="Boundaries" t="RecipeVariableBoundaries">
-                    <v n="Type" t="TypeClass">Real</v>
-                    <v n="LowerBound">""</v>
-                    <v n="UpperBound">""</v>
-                  </o>
-                  <v n="Id">2</v>
-                  <v n="Comment">""</v>
-                  <v n="VarUserDefTypeAsString">"REAL"</v>
                 </o>
               </l>
             </o>
