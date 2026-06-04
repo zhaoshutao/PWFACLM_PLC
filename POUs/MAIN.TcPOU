@@ -257,7 +257,15 @@ GVL.axesIO[7].lvdtRaw := GVL.LVDT_In7;
 
 GVL.axesIO[8].forwardLimit := GVL.forwardLimit_In8;
 GVL.axesIO[8].backwardLimit := GVL.backwardLimit_In8;
-GVL.axesIO[8].lvdtRaw := GVL.LVDT_In8;]]></ST>
+GVL.axesIO[8].lvdtRaw := GVL.LVDT_In8;
+
+GVL.axesIO[9].forwardLimit := GVL.forwardLimit_In9;
+GVL.axesIO[9].backwardLimit := GVL.backwardLimit_In9;
+GVL.axesIO[9].lvdtRaw := GVL.LVDT_In9;
+
+GVL.axesIO[10].forwardLimit := GVL.forwardLimit_In10;
+GVL.axesIO[10].backwardLimit := GVL.backwardLimit_In10;
+GVL.axesIO[10].lvdtRaw := GVL.LVDT_In10;]]></ST>
       </Implementation>
     </Action>
     <Action Name="A_RestartTC" Id="{737d9420-c364-46ec-805e-ce283c214994}">
@@ -320,11 +328,26 @@ END_IF]]></ST>
 
 (* ---- PLC → EPICS: Status outputs ---- *)
 
+(* Local/Remote mode switch *)
+IF GVL.btn_LocalOrRemote THEN
+    GVL.Local_led := TRUE;
+    GVL.Remote_led := FALSE;
+ELSE
+    GVL.Local_led := FALSE;
+    GVL.Remote_led := TRUE;
+END_IF
+
 (* Global status *)
 GVL.MOD_E_STOP_led := GVL.E_STOP_led;
 GVL.MOD_Local_led := GVL.Local_led;
 GVL.MOD_Remote_led := GVL.Remote_led;
 GVL.MOD_Error_led := GVL.Error;
+
+(* Global LEDs → Modbus via MOD_AxisStatW[1] spare word (%MW601) *)
+GVL.MOD_AxisStatW[1].0 := GVL.MOD_E_STOP_led;
+GVL.MOD_AxisStatW[1].1 := GVL.MOD_Local_led;
+GVL.MOD_AxisStatW[1].2 := GVL.MOD_Remote_led;
+GVL.MOD_AxisStatW[1].3 := GVL.MOD_Error_led;
 
 (* Per-axis status *)
 FOR _i := 1 TO GVL.cActiveAxes DO
@@ -349,14 +372,6 @@ GVL.MOD_ErrorDescription := GVL.ErrorDescription;
 
 (* ---- EPICS → PLC: Command inputs ---- *)
 
-(* Local/Remote mode switch *)
-IF GVL.btn_LocalOrRemote THEN
-    GVL.Local_led := TRUE;
-    GVL.Remote_led := FALSE;
-ELSE
-    GVL.Local_led := FALSE;
-    GVL.Remote_led := TRUE;
-END_IF
 
 (* restartTC — Remote mode: copy from Modbus; Local mode: set directly by HMI *)
 IF GVL.Remote_led THEN
@@ -488,6 +503,7 @@ END_IF]]></ST>
     <LineIds Name="MAIN.A_MapHWIO">
       <LineId Id="2" Count="33" />
       <LineId Id="1" Count="0" />
+      <LineId Id="37" Count="7" />
     </LineIds>
     <LineIds Name="MAIN.A_RestartTC">
       <LineId Id="2" Count="4" />
@@ -499,7 +515,10 @@ END_IF]]></ST>
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="MAIN.modbus">
-      <LineId Id="2" Count="127" />
+      <LineId Id="2" Count="4" />
+      <LineId Id="133" Count="8" />
+      <LineId Id="7" Count="29" />
+      <LineId Id="45" Count="84" />
       <LineId Id="1" Count="0" />
       <LineId Id="131" Count="1" />
     </LineIds>

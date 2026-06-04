@@ -26,6 +26,11 @@ STRUCT
 
     (* Axis name for error messages *)
     name: STRING(30);
+	
+	(* backlash *)
+	backlash: REAL:=0.2;          (* mm, 默认 0 *)
+	backlashEnable: BOOL;    (* 默认 FALSE *)
+
 END_STRUCT
 END_TYPE]]></Declaration>
   </DUT>

@@ -4,8 +4,8 @@
     <Declaration><![CDATA[
 {attribute 'qualified_only'}
 VAR_GLOBAL CONSTANT
-    cMaxAxes : UINT := 8;   (* Change this to add/remove axes without touching code *)
-    cActiveAxes : UINT := 8; (* Currently active axes; increase as you add hardware *)
+    cMaxAxes : UINT := 10;   (* Change this to add/remove axes without touching code *)
+    cActiveAxes : UINT := 10; (* Currently active axes; increase as you add hardware *)
 END_VAR
 
 VAR_GLOBAL
@@ -83,6 +83,16 @@ VAR_GLOBAL
     backwardLimit_In8 AT %I*: BOOL;
     LVDT_In8 AT %I*: INT;
 
+    (* Axis 9 HW inputs — BL2COL1 *)
+    forwardLimit_In9 AT %I*: BOOL;
+    backwardLimit_In9 AT %I*: BOOL;
+    LVDT_In9 AT %I*: INT;
+
+    (* Axis 10 HW inputs — BL2COL2 *)
+    forwardLimit_In10 AT %I*: BOOL;
+    backwardLimit_In10 AT %I*: BOOL;
+    LVDT_In10 AT %I*: INT;
+
     (* ================================================================
        All-axis combined commands
        ================================================================ *)
@@ -103,11 +113,11 @@ VAR_GLOBAL
        Layout:
          Global controls:   %MW0  (1 WORD = 16 bits)
          All-axis commands: %MW2  (1 WORD)
-         Per-axis commands: %MW4  (2 WORDs × 8 axes = 16 WORDs)
-         Per-axis params:   %MB200 (7 REALs × 8 axes = 56 REALs)
-         Per-axis status:   %MW300 (2 WORDs × 8 axes = 16 WORDs)
-         Per-axis outputs:  %MB700 (3 REALs × 8 axes = 24 REALs)
-         Error info:        %MB800 (INT + STRING)
+         Per-axis commands: %MW4  (2 WORDs × 10 axes = 20 WORDs)
+         Per-axis params:   %MB200 (7 REALs × 10 axes = 70 REALs)
+         Per-axis status:   %MW600 (2 WORDs × 10 axes = 20 WORDs)
+         Per-axis outputs:  %MB700 (3 REALs × 10 axes = 30 REALs)
+         Error info:        %MB820 (INT + STRING)
        ================================================================ *)
 
     (* ---- EPICS → PLC: Command inputs ---- *)
@@ -134,10 +144,10 @@ VAR_GLOBAL
          bit 3: Stop      bit 7: LVDT_ManualRelease
        Axis 1 at Word 2 (%MX4.x), Axis N at Word (2+N*2) (%MX(4+(N-1)*4).x)
     *)
-    MOD_AxisCmdW AT %MW4: ARRAY[0..15] OF WORD; (* 8 axes × 2 words *)
+    MOD_AxisCmdW AT %MW4: ARRAY[0..19] OF WORD; (* 10 axes × 2 words *)
 
-    (* Per-axis REAL parameters — %MB200, 7 REALs per axis, 8 axes *)
-    MOD_AxisParams AT %MB200: ARRAY[0..55] OF REAL;
+    (* Per-axis REAL parameters — %MB200, 7 REALs per axis, 10 axes *)
+    MOD_AxisParams AT %MB200: ARRAY[0..69] OF REAL;
     (* Layout per axis (28 bytes = 7 REALs):
        [0] targetPosition    [4] minPosition
        [1] targetVelocity    [5] maxPosition
@@ -148,10 +158,17 @@ VAR_GLOBAL
     (* ---- PLC → EPICS: Status outputs ---- *)
 
     (* Global status — Word 100 (%MW200) *)
-    MOD_E_STOP_led  AT %MX400.0: BOOL;
-    MOD_Local_led   AT %MX400.1: BOOL;
-    MOD_Remote_led  AT %MX400.2: BOOL;
-    MOD_Error_led   AT %MX400.3: BOOL;
+   // MOD_E_STOP_led  AT %MX400.0: BOOL;
+  //  MOD_Local_led   AT %MX400.1: BOOL;
+   // MOD_Remote_led  AT %MX400.2: BOOL;
+   // MOD_Error_led   AT %MX400.3: BOOL;
+	
+    (* Global status LEDs — mapped via MOD_AxisStatW[1] (%MW601) spare word *)
+    MOD_E_STOP_led: BOOL;
+    MOD_Local_led: BOOL;
+    MOD_Remote_led: BOOL;
+    MOD_Error_led: BOOL;
+
 
     (* Per-axis BOOL status — Word 150–165 (%MW300–%MW330)
        Each axis: 1 WORD (6 bits used, 10 spare)
@@ -159,17 +176,17 @@ VAR_GLOBAL
          bit 1: moving         bit 4: moveDone
          bit 2: forwardLimit   bit 5: positionSetDone
     *)
-    MOD_AxisStatW AT %MW600: ARRAY[0..15] OF WORD;
+    MOD_AxisStatW AT %MW600: ARRAY[0..19] OF WORD; (* 10 axes × 2 words *)
 
-    (* Per-axis REAL outputs — %MB700, 3 REALs per axis, 8 axes *)
-    MOD_AxisOutput AT %MB700: ARRAY[0..23] OF REAL;
+    (* Per-axis REAL outputs — %MB700, 3 REALs per axis, 10 axes *)
+    MOD_AxisOutput AT %MB700: ARRAY[0..29] OF REAL;
     (* Layout per axis (12 bytes = 3 REALs):
        [0] currentVelocity  [1] currentPosition  [2] lvdtPV
     *)
 
     (* Error info *)
-    MOD_ErrorId           AT %MB800: INT;
-    MOD_ErrorDescription  AT %MB804: STRING;
+    MOD_ErrorId           AT %MB820: INT;
+    MOD_ErrorDescription  AT %MB824: STRING;
 END_VAR
 
 VAR_GLOBAL PERSISTENT

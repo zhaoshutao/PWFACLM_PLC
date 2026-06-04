@@ -45,6 +45,9 @@ VAR
 	
 	fTrigJogBackward: F_TRIG;
 	fTrigJogForward: F_TRIG;
+	
+	(* Backlash compensation *)
+	backlashPhase: BOOL;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ============================================================
@@ -123,41 +126,6 @@ END_IF
    ============================================================ *)
 Axis.ReadStatus();
 IO.moving := Axis.Status.Moving;
-(*
-//fTrigJogForward(CLK:=IO.btnJogForward);
-IF IO.btnJogForward AND jState <> 3 THEN
-    IF Cfg.currentPositionRetain + Cfg.jogStep <= Cfg.maxPosition THEN
-        IO.inputPositionOutOfRange := FALSE;
-        GVL.Error := FALSE;
-        GVL.ErrorId := 0;
-        GVL.ErrorDescription := '';
-    ELSE
-        IO.inputPositionOutOfRange := TRUE;
-        GVL.Error := TRUE;
-        GVL.ErrorId := 1002;
-        GVL.ErrorDescription := CONCAT('exceed ', CONCAT(Cfg.name, '_maxPosition'));
-		RETURN;
-    END_IF
-END_IF
-
-//fTrigJogBackward(CLK:=IO.btnJogBackward);
-IF IO.btnJogBackward AND jState <> 3 THEN
-    IF Cfg.currentPositionRetain - Cfg.jogStep >= Cfg.minPosition THEN
-        IO.inputPositionOutOfRange := FALSE;
-        GVL.Error := FALSE;
-        GVL.ErrorId := 0;
-        GVL.ErrorDescription := '';
-    ELSE
-        IO.inputPositionOutOfRange := TRUE;
-        GVL.Error := TRUE;
-        GVL.ErrorId := 1003;
-        GVL.ErrorDescription := CONCAT('less than ', CONCAT(Cfg.name, '_minPosition'));
-		IO.btnStop:=TRUE;
-		RETURN;
-    END_IF
-END_IF
-
-*)
 
 (* Error status from NC *)
 IF Axis.NcToPlc.ErrorCode = 0 THEN
@@ -196,15 +164,33 @@ CASE mState OF
             mState := 2;
         END_IF
     2:
-        mMoveTargetPos := Cfg.targetPosition;
         mMoveTargetVel := Cfg.targetVelocity;
         IF IO.btnMove THEN
+            (* backlash: reverse move → compensate first *)
+            IF Cfg.backlashEnable
+               AND (Cfg.backlash > 0.0)
+               AND (Cfg.targetPosition < Cfg.currentPositionRetain) THEN
+                mMoveTargetPos := Cfg.targetPosition - Cfg.backlash;
+                backlashPhase := TRUE;
+            ELSE
+                mMoveTargetPos := Cfg.targetPosition;
+                backlashPhase := FALSE;
+            END_IF
             mState := 3;
         END_IF
     3:
         IF MC_MoveAbsolute.Done THEN
-            mState := 88;
+            IF backlashPhase THEN
+                (* backlash pass complete → load final target *)
+                mMoveTargetPos := Cfg.targetPosition;
+                backlashPhase := FALSE;
+                mState := 10;
+            ELSE
+                mState := 88;
+            END_IF
         END_IF
+    10:
+        mState := 3;    (* re-trigger Execute rising edge *)
     88:
         IO.btnMove := FALSE;
         mState := 0;
@@ -499,17 +485,6 @@ END_IF]]></ST>
       <LineId Id="469" Count="3" />
       <LineId Id="468" Count="0" />
       <LineId Id="474" Count="0" />
-      <LineId Id="477" Count="0" />
-      <LineId Id="73" Count="11" />
-      <LineId Id="480" Count="0" />
-      <LineId Id="86" Count="1" />
-      <LineId Id="478" Count="0" />
-      <LineId Id="88" Count="11" />
-      <LineId Id="482" Count="0" />
-      <LineId Id="481" Count="0" />
-      <LineId Id="101" Count="1" />
-      <LineId Id="462" Count="0" />
-      <LineId Id="467" Count="0" />
       <LineId Id="109" Count="76" />
       <LineId Id="483" Count="0" />
       <LineId Id="485" Count="1" />
@@ -533,6 +508,10 @@ END_IF]]></ST>
       <LineId Id="514" Count="0" />
       <LineId Id="356" Count="60" />
       <LineId Id="2" Count="0" />
+      <LineId Id="449" Count="12" />
+      <LineId Id="517" Count="0" />
+      <LineId Id="463" Count="2" />
+      <LineId Id="518" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>
