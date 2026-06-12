@@ -521,6 +521,7 @@ END_IF]]></ST>
       <LineId Id="45" Count="84" />
       <LineId Id="1" Count="0" />
       <LineId Id="131" Count="1" />
+      <LineId Id="142" Count="5" />
     </LineIds>
     <LineIds Name="MAIN.simu">
       <LineId Id="2" Count="3" />
